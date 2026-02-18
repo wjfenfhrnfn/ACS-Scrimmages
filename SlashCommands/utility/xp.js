@@ -34,7 +34,7 @@ export async function execute(interaction) {
       }
     });
 
-    const value = null
+    const value = response.data.value || null
 
     if (value == null) {
       await interaction.editReply("Play an ACS Scrimmages once");
@@ -97,4 +97,5 @@ export async function execute(interaction) {
       await interaction.editReply("Request Failed: ", err.message);
     }
   }
+
 }
