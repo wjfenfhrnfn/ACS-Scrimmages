@@ -1,59 +1,44 @@
-const Discord = require('discord.js');
-const client = new Discord.Client({ intents: ["GUILDS", "GUILD_MESSAGES"] })
-const dotenv = require('dotenv'); 
-dotenv.config();
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import 'dotenv/config';
 
-const sleep = (ms) => {
-    return new Promise((r) => setTimeout(r, ms));
-}
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+client.commands = new Collection();
 
-if (process.env.TOKEN == null) {
-    console.log("An discord token is empty.");
-    sleep(60000).then(() => console.log("Service is getting stopped automatically"));
-    return 0;
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const discordLogin = async() => {
-    try {
-        await client.login(process.env.TOKEN);  
-    } catch (TOKEN_INVALID) {
-        console.log("An invalid token was provided");
-        sleep(60000).then(() => console.log("Service is getting stopped automatically"));
-    }
-}
+const foldersPath = path.join(__dirname, 'SlashCommands');
+const commandFolders = fs.readdirSync(foldersPath);
 
-
-discordLogin();
-
-
-client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}.`);
-});
-
-  
-client.on('messageCreate', msg => {
-
-    try { 
-        if (msg.content === process.env.PREFIX + 'call') msg.channel.send(`!callback`);
-
-        if (msg.content === process.env.PREFIX + 'avatar') msg.channel.send(msg.author.displayAvatarURL());
-        
-        if(msg.content === process.env.PREFIX + 'help') {
-            const embed = new Discord.MessageEmbed()
-            .setTitle("도움말")
-            .setColor('000') 
-            .setDescription('디스코드봇 테스트입니다.');
-
-            msg.reply({ embeds: [embed] })
-        }
-
-        if(msg.content === process.env.PREFIX + 'server') {
-            msg.channel.send(`현재 서버의 이름은 ${msg.guild.name} 입니다.\n총 멤버 수는 ${msg.guild.memberCount} 명 입니다.`)
-          }
-
-        console.log(msg.content)
-    } catch (e) {
-        console.log(e);
-    }
+for (const folder of commandFolders) {
+  const commandsPath = path.join(foldersPath, folder);
+  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
     
-});
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = await import(pathToFileURL(filePath));
+        
+    if (command.data && command.execute) {
+        client.commands.set(command.data.name, command);
+    }
+  }
+}
+
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+  const filePath = path.join(eventsPath, file);
+  const event = await import(pathToFileURL(filePath));
+    
+  if (event.once) {
+    client.once(event.name, (...args) => event.execute(...args));
+  } else {
+    client.on(event.name, (...args) => event.execute(...args));
+  }
+}
+
+client.login(process.env.DISCORD_TOKEN);
