@@ -34,7 +34,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     console.log(`${commands.length}개의 슬래시 커맨드 배포를 시작합니다...`);
 
     const data = await rest.put(
-      // Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID)
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
         { body: commands },
     );
